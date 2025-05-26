@@ -1,0 +1,115 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.modal.trash-modal {
+  background: var(--card-bg);
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  width: 90vw;
+  max-width: 360px;
+  color: #000;
+  position: relative;
+}
+
+.modal-close-icon {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.trash-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.trash-item {
+  position: relative;
+}
+
+.trash-card {
+  width: 3rem;
+  height: 4rem;
+  object-fit: contain;
+  border-radius: 0.25rem;
+}
+
+.remove-card-btn {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.25rem;
+  background: #fff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.75rem;
+}
+
+.picker-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 2rem);
+  gap: 0.25rem;
+  justify-content: center;
+}
+
+.picker-card {
+  width: 2rem;
+  height: 3rem;
+  cursor: pointer;
+}
+
+.picker-close-slot {
+  width: 2rem;
+  height: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  cursor: pointer;
+  border: 2px dashed var(--border-light);
+  border-radius: 0.25rem;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+@media (max-width: 480px) {
+  .modal.trash-modal {
+    width: 95vw;
+    padding: 1rem;
+  }
+  .trash-card {
+    width: 2.5rem;
+    height: 3.5rem;
+  }
+  .picker-card {
+    width: 1.75rem;
+    height: 2.75rem;
+  }
+  .picker-grid {
+    grid-template-columns: repeat(5, 1.75rem);
+    gap: 0.2rem;
+  }
+  .modal-close-icon {
+    font-size: 1rem;
+    top: 0.25rem;
+    right: 0.25rem;
+  }
+}

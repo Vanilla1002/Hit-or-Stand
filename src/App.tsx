@@ -1,7 +1,10 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, createContext } from "react";
+import { FaCog, FaTrash } from "react-icons/fa";
+import { SettingsModal } from "./SettingsModal";
+import { TrashModal } from "./TrashModal";
+import "./app.css";
 
-// Card options
-const CARD_VALUES = [
+const RANKS = [
   "A",
   "2",
   "3",
@@ -16,91 +19,129 @@ const CARD_VALUES = [
   "Q",
   "K",
 ];
+export const SuitContext = createContext<{ activeSuit: string }>({
+  activeSuit: "hearts",
+});
 
-// Define types
 type Results = { move: string; winProb: string; lossProb: string };
 
-type CardInputProps = { value: string; onChange: (value: string) => void };
+type HandProps = {
+  label: string;
+  cards: string[];
+  onChange: (idx: number, val: string) => void;
+  onAdd?: () => void;
+  onRemove?: (idx: number) => void;
+  className?: string;
+  style?: React.CSSProperties;
+};
 
-// Reusable card select component
-function CardSelect({ value, onChange }: CardInputProps) {
+function Hand({
+  label,
+  cards,
+  onChange,
+  onAdd,
+  onRemove,
+  className,
+  style,
+}: HandProps) {
+  const [pickerIdx, setPickerIdx] = useState<number | null>(null);
+  const { activeSuit } = React.useContext(SuitContext);
+
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="border rounded-xl p-2 w-20 text-center"
-    >
-      <option value="">--</option>
-      {CARD_VALUES.map((val) => (
-        <option key={val} value={val}>
-          {val}
-        </option>
-      ))}
-    </select>
+    <div className={className || ""} style={style}>
+      <div className="hand-header">
+        <div className="role-label">{label}</div>
+      </div>
+      <div className="hand">
+        {cards.map((c, i) => (
+          <div key={i} className="hand-slot">
+            {c ? (
+              <img
+                src={`/cards/${activeSuit}_${c}.png`}
+                alt={c}
+                className="card-image"
+                onClick={() => setPickerIdx(i)}
+              />
+            ) : (
+              <div className="pick-slot" onClick={() => setPickerIdx(i)}>
+                +
+              </div>
+            )}
+
+            {pickerIdx === i && (
+              <div className="card-picker-popup">
+                <div className="picker-grid">
+                  {RANKS.map((name) => (
+                    <img
+                      key={name}
+                      src={`/cards/${activeSuit}_${name}.png`}
+                      alt={name}
+                      className="card-image picker-card"
+                      onClick={() => {
+                        onChange(i, name);
+                        setPickerIdx(null);
+                      }}
+                    />
+                  ))}
+                  <div
+                    className="picker-close-slot"
+                    onClick={() => setPickerIdx(null)}
+                  >
+                    ×
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {onRemove && c && (
+              <button className="remove-card-btn" onClick={() => onRemove(i)}>
+                ×
+              </button>
+            )}
+          </div>
+        ))}
+        {onAdd && (
+          <div className="add-slot" onClick={onAdd}>
+            +
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
-export default function App() {
-  const [playerCards, setPlayerCards] = useState<string[]>(["", ""]);
-  const [dealerCard, setDealerCard] = useState<string>("");
-  const [otherPlayers, setOtherPlayers] = useState<string[][]>([["", ""]]);
+export default function TableApp() {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [trashOpen, setTrashOpen] = useState(false);
+  const [trash, setTrash] = useState<Array<{ suit: string; rank: string }>>([]);
+  
+
+  const [activeSuit, setActiveSuit] = useState<
+    "hearts" | "diamonds" | "clubs" | "spades"
+  >("hearts");
+
+  const [dealer, setDealer] = useState<string[]>([""]);
+  const [player, setPlayer] = useState<string[]>(["", ""]);
+
+  const [pickerIdx, setPickerIdx] = useState<number | "trash" | null>(null);
   const [results, setResults] = useState<Results | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
 
-  // Generic handlers
-  const handleCardChange = (
-    list: any[],
-    setList: React.Dispatch<React.SetStateAction<any[]>>,
-    index: number,
-    value: any
+  const updateHand = (
+    list: string[],
+    setList: any,
+    idx: number,
+    val: string
   ) => {
-    const updated = [...list];
-    updated[index] = value;
-    setList(updated);
+    const clone = [...list];
+    clone[idx] = val;
+    setList(clone);
   };
 
-  const addCard = (
-    list: any[],
-    setList: React.Dispatch<React.SetStateAction<any[]>>
-  ) => {
-    setList([...list, ""]);
-  };
-  const removeCard = (
-    list: any[],
-    setList: React.Dispatch<React.SetStateAction<any[]>>,
-    index: number
-  ) => {
-    setList(list.filter((_, i) => i !== index));
-  };
-
-  // Other players handlers
-  const handleOtherChange = (pIdx: number, cIdx: number, value: string) => {
-    setOtherPlayers(
-      otherPlayers.map((hand, i) =>
-        i !== pIdx ? hand : hand.map((c, j) => (j === cIdx ? value : c))
-      )
-    );
-  };
-  const addOtherPlayer = () => setOtherPlayers([...otherPlayers, ["", ""]]);
-  const removeOtherPlayer = (pIdx: number) =>
-    setOtherPlayers(otherPlayers.filter((_, i) => i !== pIdx));
-  const addCardToOther = (pIdx: number) =>
-    setOtherPlayers(
-      otherPlayers.map((hand, i) => (i !== pIdx ? hand : [...hand, ""]))
-    );
-  const removeCardFromOther = (pIdx: number, cIdx: number) =>
-    setOtherPlayers(
-      otherPlayers.map((hand, i) =>
-        i !== pIdx ? hand : hand.filter((_, j) => j !== cIdx)
-      )
-    );
-
-  // Completeness
-  const canCalculate = useMemo(() => {
-    const flat = [...playerCards, dealerCard, ...otherPlayers.flat()];
-    return flat.every((v) => v !== "");
-  }, [playerCards, dealerCard, otherPlayers]);
-
+  const canCalc = useMemo(
+    () => [...dealer, ...player].every((v) => v),
+    [dealer, player]
+  );
   const calculate = () => {
     setLoading(true);
     setTimeout(() => {
@@ -109,137 +150,84 @@ export default function App() {
     }, 500);
   };
 
+  const addTrash = (card: string) => {
+    setTrash((prev) => [...prev, card]);
+    setPickerIdx(null);
+  };
+  const removeTrash = (idx: number) =>
+    setTrash((prev) => prev.filter((_, i) => i !== idx));
+
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <div className="bg-white shadow-md rounded-2xl p-6 w-full max-w-xl">
-        <h1 className="text-2xl font-bold mb-4 text-center">
-          Blackjack Calculator
-        </h1>
+    <SuitContext.Provider value={{ activeSuit }}>
+      <div className={trashOpen ? 'table blurred' : 'table'}>
+        <button
+          className="settings-btn"
+          onClick={() => setSettingsOpen((p) => !p)}
+          aria-label="Settings"
+        >
+          <FaCog size={20} />
+        </button>
+        <SettingsModal
+          isOpen={settingsOpen}
+          active={activeSuit}
+          onClose={() => setSettingsOpen(false)}
+          onSelect={(s) => setActiveSuit(s)}
+        />
 
-        {/* Player Cards */}
-        <div className="mb-4">
-          <h2 className="font-semibold mb-2">Your Hand</h2>
-          <div className="flex space-x-2">
-            {playerCards.map((card, idx) => (
-              <div key={idx} className="relative flex items-center">
-                <CardSelect
-                  value={card}
-                  onChange={(val) =>
-                    handleCardChange(playerCards, setPlayerCards, idx, val)
-                  }
-                />
-                {idx >= 2 && (
-                  <button
-                    onClick={() => removeCard(playerCards, setPlayerCards, idx)}
-                    className="absolute -top-2 -right-2 bg-red-100 text-red-500 rounded-full p-1 text-xs"
-                    title="Remove this card"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            ))}
-            <button
-              onClick={() => addCard(playerCards, setPlayerCards)}
-              className="px-3 rounded-xl border border-dashed border-gray-400 text-gray-500"
-              title="Add a card"
-            >
-              +
-            </button>
-          </div>
-        </div>
+        <Hand
+          label="Dealer"
+          cards={dealer.slice(0, 1)}
+          onChange={(i, v) => updateHand(dealer, setDealer, i, v)}
+          className="area dealer-area"
+        />
 
-        {/* Dealer */}
-        <div className="mb-4">
-          <h2 className="font-semibold mb-2">Dealer Upcard</h2>
-          <div className="relative inline-block">
-            <CardSelect value={dealerCard} onChange={setDealerCard} />
-            {dealerCard && (
-              <button
-                onClick={() => setDealerCard("")}
-                className="absolute -top-2 -right-2 bg-red-100 text-red-500 rounded-full p-1 text-xs"
-                title="Remove dealer card"
-              >
-                ×
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Other Players */}
-        <div className="mb-4">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="font-semibold">Other Players</h2>
-            <button
-              onClick={addOtherPlayer}
-              className="text-blue-500 hover:underline"
-            >
-              Add Hand
-            </button>
-          </div>
-          <div className="space-y-4">
-            {otherPlayers.map((hand, pIdx) => (
-              <div key={pIdx} className="flex items-center space-x-2">
-                {hand.map((card, cIdx) => (
-                  <div key={cIdx} className="relative flex items-center">
-                    <CardSelect
-                      value={card}
-                      onChange={(val) => handleOtherChange(pIdx, cIdx, val)}
-                    />
-                    {cIdx >= 2 && (
-                      <button
-                        onClick={() => removeCardFromOther(pIdx, cIdx)}
-                        className="absolute -top-2 -right-2 bg-red-100 text-red-500 rounded-full p-1 text-xs"
-                        title="Remove this card"
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <button
-                  onClick={() => addCardToOther(pIdx)}
-                  className="px-3 rounded-xl border border-dashed border-gray-400 text-gray-500"
-                  title="Add card"
-                >
-                  +
-                </button>
-                <button
-                  onClick={() => removeOtherPlayer(pIdx)}
-                  className="px-3 rounded-xl border border-red-400 text-red-500"
-                  title="Remove this player"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Calculate */}
-        <div className="text-center">
+        <div className="center-panel">
           <button
+            className="calculate-btn"
+            disabled={!canCalc || loading}
             onClick={calculate}
-            disabled={loading || !canCalculate}
-            className="px-6 py-2 bg-blue-600 text-white rounded-2xl shadow hover:bg-blue-700 disabled:opacity-50"
           >
             {loading ? "Calculating..." : "Calculate"}
           </button>
+          {results && (
+            <div className="results">
+              <div>
+                <strong>Move:</strong> {results.move}
+              </div>
+              <div>
+                <strong>Win:</strong> {results.winProb}
+              </div>
+              <div>
+                <strong>Loss:</strong> {results.lossProb}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Results */}
-        {results && (
-          <div className="mt-6 bg-gray-50 p-4 rounded-xl">
-            <h2 className="font-semibold mb-2">Recommended Move</h2>
-            <p className="text-lg">
-              Move: <strong>{results.move}</strong>
-            </p>
-            <p>
-              Win: {results.winProb} | Loss: {results.lossProb}
-            </p>
-          </div>
-        )}
+        <Hand
+          label="You"
+          cards={player}
+          onChange={(i, v) => updateHand(player, setPlayer, i, v)}
+          onAdd={() => setPlayer((p) => [...p, ""])}
+          onRemove={(i) => setPlayer((p) => p.filter((_, j) => j !== i))}
+          className="area player-area"
+        />
+
+        {/* Trash Tab */}
+        <button className="trash-tab" onClick={() => setTrashOpen(true)} aria-label="Open Seen Cards">
+          <FaTrash size={20} />
+        </button>
+
+        <TrashModal
+          isOpen={trashOpen}
+          trash={trash}
+          activeSuit={activeSuit}
+          onAdd={addTrash}
+          onRemove={removeTrash}
+          onClose={() => setTrashOpen(false)}
+        />
+
       </div>
-    </div>
+    </SuitContext.Provider>
   );
 }
