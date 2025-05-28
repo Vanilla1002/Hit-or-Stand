@@ -22,9 +22,16 @@ type Props = {
   decks: number;
   onDecksChange: (n: number) => void;
   onShuffle?: () => void;
+  
 };
 
-export function SettingsModal({ isOpen, onClose, decks, onDecksChange, onShuffle }: Props) {
+export function SettingsModal({
+  isOpen,
+  onClose,
+  decks,
+  onDecksChange,
+  onShuffle,
+}: Props) {
   if (!isOpen) return null;
 
   const { activeSuit, setActiveSuit } = useContext(SuitContext);
@@ -48,7 +55,11 @@ export function SettingsModal({ isOpen, onClose, decks, onDecksChange, onShuffle
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-close-icon" onClick={onClose} aria-label="Close settings">
+        <div
+          className="modal-close-icon"
+          onClick={onClose}
+          aria-label="Close settings"
+        >
           <RiCloseFill size={20} />
         </div>
         <h3 className="modal-title">Settings</h3>

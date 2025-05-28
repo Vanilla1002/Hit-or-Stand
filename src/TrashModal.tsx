@@ -7,7 +7,8 @@ type Props = {
   onAdd: (rank: string) => void;
   onRemove: (idx: number) => void;
   onClose: () => void;
-  remainingCounts: Record<string, number>; // Added to track remaining cards per rank
+  remainingCounts: Record<string, number>;
+  title?: string;
 };
 
 export function TrashModal({
@@ -18,23 +19,13 @@ export function TrashModal({
   onRemove,
   onClose,
   remainingCounts,
+  title,
 }: Props) {
   if (!isOpen) return null;
 
   const RANKS = [
-    "A",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "10",
-    "J",
-    "Q",
-    "K",
+    "A", "2", "3", "4", "5", "6", "7",
+    "8", "9", "10", "J", "Q", "K",
   ];
 
   return (
@@ -47,7 +38,8 @@ export function TrashModal({
         >
           ×
         </button>
-        <h3 className="modal-title">Seen Cards</h3>
+        <h3 className="modal-title">{title || "Trash"}</h3>
+
         <div className="trash-list">
           {trash.map((card, idx) => (
             <div key={idx} className="trash-item">
@@ -67,8 +59,10 @@ export function TrashModal({
           ))}
           <div className="add-trash-slot"></div>
         </div>
+
         <hr />
         <h4 className="modal-subtitle">Add a Card</h4>
+
         <div className="picker-grid">
           {RANKS.map((rank) => (
             <div key={rank} className="picker-card-wrapper">

@@ -1,32 +1,39 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaCog, FaTrash } from "react-icons/fa";
 import { ImInfo } from "react-icons/im";
 import { SettingsModal } from "./SettingsModal";
 import { TrashModal } from "./TrashModal";
 import { HowToUse } from "./howToUse";
 import { invoke } from "@tauri-apps/api/core";
-import { SuitContext, Suit } from "./SettingsModal";
+import { SuitContext } from "./SettingsModal";
+import { useDeck } from "./deckContext";
 import "./app.css";
 
 const RANKS = [
-  "A",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7",
-  "8",
-  "9",
-  "10",
-  "J",
-  "Q",
-  "K",
+  "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K",
 ];
+
+// Map your short labels to the enum names from Rust
+const RANK_TO_FULL: Record<string, string> = {
+  A: "Ace",
+  2: "Two",
+  3: "Three",
+  4: "Four",
+  5: "Five",
+  6: "Six",
+  7: "Seven",
+  8: "Eight",
+  9: "Nine",
+  10: "Ten",
+  J: "Jack",
+  Q: "Queen",
+  K: "King",
+};
 
 type Results = { move: string; winProb: string; lossProb: string };
 type DecideRequest = { player: string[]; dealer: string; others: string[] };
 type DecideResponse = { hitEv: number; standEv: number };
+type NextTurnRequest = { player: string[]; dealer: string[]; others: string[] };
 
 type HandProps = {
   label: string;
@@ -38,15 +45,7 @@ type HandProps = {
   remainingCounts: Record<string, number>;
 };
 
-function Hand({
-  label,
-  cards,
-  onChange,
-  onAdd,
-  onRemove,
-  className,
-  remainingCounts,
-}: HandProps) {
+function Hand({ label, cards, onChange, onAdd, onRemove, className, remainingCounts }: HandProps) {
   const [pickerIdx, setPickerIdx] = useState<number | null>(null);
   const { activeSuit } = React.useContext(SuitContext);
 
@@ -66,9 +65,7 @@ function Hand({
                 onClick={() => setPickerIdx(i)}
               />
             ) : (
-              <div className="pick-slot" onClick={() => setPickerIdx(i)}>
-                +
-              </div>
+              <div className="pick-slot" onClick={() => setPickerIdx(i)}>+</div>
             )}
 
             {pickerIdx === i && (
@@ -79,9 +76,7 @@ function Hand({
                       <img
                         src={`/cards/${activeSuit}_${name}.png`}
                         alt={name}
-                        className={`picker-card ${
-                          remainingCounts[name] <= 0 ? "exhausted" : ""
-                        }`}
+                        className={`picker-card ${remainingCounts[name] <= 0 ? "exhausted" : ""}`}
                         onClick={() => {
                           if (remainingCounts[name] > 0) {
                             onChange(i, name);
@@ -89,17 +84,10 @@ function Hand({
                           }
                         }}
                       />
-                      {remainingCounts[name] <= 0 && (
-                        <div className="exhausted-overlay">X</div>
-                      )}
+                      {remainingCounts[name] <= 0 && <div className="exhausted-overlay">X</div>}
                     </div>
                   ))}
-                  <div
-                    className="picker-close-slot"
-                    onClick={() => setPickerIdx(null)}
-                  >
-                    ×
-                  </div>
+                  <div className="picker-close-slot" onClick={() => setPickerIdx(null)}>×</div>
                 </div>
               </div>
             )}
@@ -115,49 +103,55 @@ function Hand({
             )}
           </div>
         ))}
-        {onAdd && (
-          <div className="add-slot" onClick={onAdd}>
-            +
-          </div>
-        )}
+        {onAdd && <div className="add-slot" onClick={onAdd}>+</div>}
       </div>
     </div>
   );
 }
 
-export default function MainTable({
-  decks: initialDecks,
-  cardStyle,
-}: {
-  decks: number;
-  cardStyle: string;
-}) {
+export default function MainTable({ decks: initialDecks, cardStyle }: { decks: number; cardStyle: string }) {
   const [numDecks, setNumDecks] = useState<number>(initialDecks);
   const [trash, setTrash] = useState<string[]>([]);
   const [dealer, setDealer] = useState<string[]>([""]);
+  const [dealerExtra, setDealerExtra] = useState<string[]>([]);
   const [player, setPlayer] = useState<string[]>(["", ""]);
+  const [results, setResults] = useState<Results | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [trashOpen, setTrashOpen] = useState(false);
+  const [nextTurnOpen, setNextTurnOpen] = useState(false);
+  const [howToUseOpen, setHowToUseOpen] = useState(false);
+  const { activeSuit, setActiveSuit } = React.useContext(SuitContext);
+  const deck = useDeck();
+
+  useEffect(() => {
+    invoke("create_deck", { numDecks }).catch(console.error);
+  }, [numDecks]);
 
   const clearAllHands = () => {
     setPlayer(["", ""]);
     setDealer([""]);
     setTrash([]);
+    setDealerExtra([]);
+    setResults(null);
   };
 
+  // count how many times each rank has been picked in this turn
   const initialCount = 4 * numDecks;
-  const used = [...player, ...dealer, ...trash].filter((c) => c !== "");
-  const counts: Record<string, number> = {};
-  used.forEach((c) => (counts[c] = (counts[c] || 0) + 1));
-  const remainingCounts = RANKS.reduce((acc, r) => {
-    acc[r] = initialCount - (counts[r] || 0);
+  const seen = [...player, ...dealer, ...trash, ...dealerExtra].filter((c) => c !== "");
+  const seenCounts = seen.reduce((acc, r) => {
+    acc[r] = (acc[r] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [trashOpen, setTrashOpen] = useState(false);
-  const [howToUseOpen, setHowToUseOpen] = useState(false);
-  const [results, setResults] = useState<Results | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [activeSuit, setActiveSuit] = useState<Suit>(cardStyle as Suit);
+  // subtract seenCounts from the actual deck counts (or initialCount)
+  const remainingCounts: Record<string, number> = {};
+  RANKS.forEach((r) => {
+    const fullKey = RANK_TO_FULL[r];
+    const deckCount = deck?.counts[fullKey] ?? initialCount;
+    const seenCount = seenCounts[r] || 0;
+    remainingCounts[r] = Math.max(0, deckCount - seenCount);
+  });
 
   const filledPlayer = player.filter((c) => c !== "").length;
   const canCalculate = !loading && filledPlayer >= 2 && dealer[0] !== "";
@@ -178,7 +172,7 @@ export default function MainTable({
     try {
       const req: DecideRequest = { player, dealer: dealer[0], others: trash };
       const res = await invoke<DecideResponse>("decide_hand", { req });
-      const best = res.hitEv > res.standEv ? res.hitEv : res.standEv;
+      const best = Math.max(res.hitEv, res.standEv);
       setResults({
         move: res.hitEv > res.standEv ? "Hit" : "Stand",
         winProb: `${(best * 100).toFixed(2)}%`,
@@ -192,9 +186,27 @@ export default function MainTable({
     }
   };
 
+  const handleNextTurn = async () => {
+    const fullDealerHand = [dealer[0], ...dealerExtra];
+    const req: NextTurnRequest = {
+      player: player.filter((c) => c),
+      dealer: fullDealerHand,
+      others: trash,
+    };
+    try {
+      await invoke("next_turn", { req });
+      clearAllHands();
+      setNextTurnOpen(false);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to start next turn");
+    }
+  };
+
   return (
     <SuitContext.Provider value={{ activeSuit, setActiveSuit }}>
-      <div className={trashOpen ? "table blurred" : "table"}>
+      <div className={trashOpen || nextTurnOpen ? "table blurred" : "table"}>
+        {/* Settings & Info */}
         <button
           className="settings-btn"
           onClick={() => setSettingsOpen(true)}
@@ -221,6 +233,7 @@ export default function MainTable({
           onClose={() => setHowToUseOpen(false)}
         />
 
+        {/* Dealer Hand */}
         <Hand
           label="Dealer"
           cards={dealer}
@@ -229,6 +242,7 @@ export default function MainTable({
           remainingCounts={remainingCounts}
         />
 
+        {/* Center Panel */}
         <div className="center-panel">
           <button
             className="calculate-btn"
@@ -243,20 +257,24 @@ export default function MainTable({
             </div>
           )}
           {results && (
-            <div className="results">
-              <div>
-                <strong>Move:</strong> {results.move}
+            <>
+              <div className="results">
+                <div><strong>Move:</strong> {results.move}</div>
+                <div><strong>Win:</strong> {results.winProb}</div>
+                <div><strong>Loss:</strong> {results.lossProb}</div>
               </div>
-              <div>
-                <strong>Win:</strong> {results.winProb}
-              </div>
-              <div>
-                <strong>Loss:</strong> {results.lossProb}
-              </div>
-            </div>
+              <button
+                className="calculate-btn"
+                style={{ marginTop: "0.5rem" }}
+                onClick={() => setNextTurnOpen(true)}
+              >
+                Next Turn
+              </button>
+            </>
           )}
         </div>
 
+        {/* Player Hand */}
         <Hand
           label="You"
           cards={player}
@@ -267,6 +285,7 @@ export default function MainTable({
           remainingCounts={remainingCounts}
         />
 
+        {/* Seen Cards (Trash) */}
         <button
           className="trash-tab"
           onClick={() => setTrashOpen(true)}
@@ -278,12 +297,25 @@ export default function MainTable({
           isOpen={trashOpen}
           trash={trash}
           activeSuit={activeSuit}
+          title="Seen Cards"
+          remainingCounts={remainingCounts}
           onAdd={(r) => setTrash((t) => [...t, r])}
           onRemove={(i) => setTrash((t) => t.filter((_, j) => j !== i))}
           onClose={() => setTrashOpen(false)}
+        />
+
+        {/* Dealer Extra Cards for Next Turn */}
+        <TrashModal
+          isOpen={nextTurnOpen}
+          trash={dealerExtra}
+          title="Dealer’s New Cards"
+          activeSuit={activeSuit}
           remainingCounts={remainingCounts}
+          onAdd={(r) => setDealerExtra((d) => [...d, r])}
+          onRemove={(i) => setDealerExtra((d) => d.filter((_, j) => j !== i))}
+          onClose={handleNextTurn}
         />
       </div>
-    </SuitContext.Provider>
+        </SuitContext.Provider>
   );
-}
+};

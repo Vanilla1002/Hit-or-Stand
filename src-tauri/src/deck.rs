@@ -1,8 +1,12 @@
 use std::collections::HashMap;
 use std::fmt;
 use crate::models::{DealerState , PlayerState};
+use serde::Serialize;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+
+
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
 pub enum Rank {
     Ace,
     Two,
@@ -61,7 +65,7 @@ impl fmt::Display for Rank{
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Serialize)]
 pub struct Deck {
     pub counts: HashMap<Rank, u32>
 }
@@ -112,26 +116,26 @@ impl Deck {
 
 
 
-//testing just for now
-#[cfg(test)]
-mod tests {
-    use crate::{hand::Hand, probs::{ decide,}};
+// //testing just for now
+// #[cfg(test)]
+// mod tests {
+//     use crate::{hand::Hand, probs::{ decide,}};
 
-    use super::*;
+//     use super::*;
 
-    #[test]
-    fn draw_ace_reduces_count() {
-        let mut deck = Deck::new(1);
+//     #[test]
+//     fn draw_ace_reduces_count() {
+//         let mut deck = Deck::new(1);
         
-        print!("{:?}", deck.counts);
-        let mut dealer_cache: HashMap<DealerState, [f64; 6]> = HashMap::new();
-        let mut hit_cache:    HashMap<PlayerState, f64>    = HashMap::new();
+//         print!("{:?}", deck.counts);
+//         let mut dealer_cache: HashMap<DealerState, [f64; 6]> = HashMap::new();
+//         let mut hit_cache:    HashMap<PlayerState, f64>    = HashMap::new();
 
-        let  user_hand = Hand::with_cards(vec![Rank::Eight, Rank::Ace]);
-        let  dealer_hand = Hand::with_cards(vec![Rank::Seven, Rank::Ten]);
-        let decide = decide(&user_hand, &dealer_hand, &deck, &mut dealer_cache, &mut hit_cache);
-        print!("{:?}", decide);
+//         let  user_hand = Hand::with_cards(vec![Rank::Eight, Rank::Ace]);
+//         let  dealer_hand = Hand::with_cards(vec![Rank::Seven, Rank::Ten]);
+//         let decide = decide(&user_hand, &dealer_hand, &deck, &mut dealer_cache, &mut hit_cache);
+//         print!("{:?}", decide);
         
 
-    }
-}
+//     }
+// }
