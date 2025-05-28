@@ -9,7 +9,19 @@ import { SuitContext, Suit } from "./SettingsModal";
 import "./app.css";
 
 const RANKS = [
-  "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K",
+  "A",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "J",
+  "Q",
+  "K",
 ];
 
 type Results = { move: string; winProb: string; lossProb: string };
@@ -23,16 +35,23 @@ type HandProps = {
   onAdd?: () => void;
   onRemove?: (idx: number) => void;
   className?: string;
-  style?: React.CSSProperties;
   remainingCounts: Record<string, number>;
 };
 
-function Hand({ label, cards, onChange, onAdd, onRemove, className, style, remainingCounts }: HandProps) {
+function Hand({
+  label,
+  cards,
+  onChange,
+  onAdd,
+  onRemove,
+  className,
+  remainingCounts,
+}: HandProps) {
   const [pickerIdx, setPickerIdx] = useState<number | null>(null);
   const { activeSuit } = React.useContext(SuitContext);
 
   return (
-    <div className={className} style={style}>
+    <div className={className}>
       <div className="hand-header">
         <div className="role-label">{label}</div>
       </div>
@@ -60,7 +79,9 @@ function Hand({ label, cards, onChange, onAdd, onRemove, className, style, remai
                       <img
                         src={`/cards/${activeSuit}_${name}.png`}
                         alt={name}
-                        className={`picker-card ${remainingCounts[name] <= 0 ? 'exhausted' : ''}`}
+                        className={`picker-card ${
+                          remainingCounts[name] <= 0 ? "exhausted" : ""
+                        }`}
                         onClick={() => {
                           if (remainingCounts[name] > 0) {
                             onChange(i, name);
@@ -68,7 +89,9 @@ function Hand({ label, cards, onChange, onAdd, onRemove, className, style, remai
                           }
                         }}
                       />
-                      {remainingCounts[name] <= 0 && <div className="exhausted-overlay">X</div>}
+                      {remainingCounts[name] <= 0 && (
+                        <div className="exhausted-overlay">X</div>
+                      )}
                     </div>
                   ))}
                   <div
@@ -102,61 +125,68 @@ function Hand({ label, cards, onChange, onAdd, onRemove, className, style, remai
   );
 }
 
-type MainTableProps = { decks: number; cardStyle: string };
-
-export default function MainTable({ decks, cardStyle }: MainTableProps) {
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [trashOpen, setTrashOpen] = useState(false);
-  const [howToUseOpen, setHowToUseOpen] = useState(false);
+export default function MainTable({
+  decks: initialDecks,
+  cardStyle,
+}: {
+  decks: number;
+  cardStyle: string;
+}) {
+  const [numDecks, setNumDecks] = useState<number>(initialDecks);
   const [trash, setTrash] = useState<string[]>([]);
-  const [results, setResults] = useState<Results | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [activeSuit, setActiveSuit] = useState<Suit>(cardStyle as Suit);
   const [dealer, setDealer] = useState<string[]>([""]);
   const [player, setPlayer] = useState<string[]>(["", ""]);
 
-  // Calculate remaining counts for each rank
-  const initialCount = 4 * decks;
-  const allUsedCards = [...player, ...dealer, ...trash].filter(c => c !== "");
-  const usedCounts: Record<string, number> = {};
-  allUsedCards.forEach(card => {
-    usedCounts[card] = (usedCounts[card] || 0) + 1;
-  });
-  const remainingCounts = RANKS.reduce((acc, rank) => {
-    acc[rank] = initialCount - (usedCounts[rank] || 0);
+  const clearAllHands = () => {
+    setPlayer(["", ""]);
+    setDealer([""]);
+    setTrash([]);
+  };
+
+  const initialCount = 4 * numDecks;
+  const used = [...player, ...dealer, ...trash].filter((c) => c !== "");
+  const counts: Record<string, number> = {};
+  used.forEach((c) => (counts[c] = (counts[c] || 0) + 1));
+  const remainingCounts = RANKS.reduce((acc, r) => {
+    acc[r] = initialCount - (counts[r] || 0);
     return acc;
   }, {} as Record<string, number>);
 
-  const filledPlayerCards = player.filter((c) => c !== "").length;
-  const canCalculate = !loading && filledPlayerCards >= 2 && dealer[0] !== "";
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [trashOpen, setTrashOpen] = useState(false);
+  const [howToUseOpen, setHowToUseOpen] = useState(false);
+  const [results, setResults] = useState<Results | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [activeSuit, setActiveSuit] = useState<Suit>(cardStyle as Suit);
+
+  const filledPlayer = player.filter((c) => c !== "").length;
+  const canCalculate = !loading && filledPlayer >= 2 && dealer[0] !== "";
 
   const updateHand = (
     list: string[],
-    setList: React.Dispatch<React.SetStateAction<string[]>>,
+    fn: React.Dispatch<React.SetStateAction<string[]>>,
     idx: number,
     val: string
   ) => {
-    const clone = [...list];
-    clone[idx] = val;
-    setList(clone);
+    const arr = [...list];
+    arr[idx] = val;
+    fn(arr);
   };
 
   const calculate = async () => {
     setLoading(true);
-    setResults(null);
     try {
-      const args: DecideRequest = { player, dealer: dealer[0], others: trash };
-      const res = await invoke<DecideResponse>("decide_hand", { req: args });
-      const move = res.hitEv > res.standEv ? "Hit" : "Stand";
-      const bestEv = Math.max(res.hitEv, res.standEv);
+      const req: DecideRequest = { player, dealer: dealer[0], others: trash };
+      const res = await invoke<DecideResponse>("decide_hand", { req });
+      const best = res.hitEv > res.standEv ? res.hitEv : res.standEv;
       setResults({
-        move,
-        winProb: `${(bestEv * 100).toFixed(2)}%`,
-        lossProb: `${((1 - bestEv) * 100).toFixed(2)}%`,
+        move: res.hitEv > res.standEv ? "Hit" : "Stand",
+        winProb: `${(best * 100).toFixed(2)}%`,
+        lossProb: `${((1 - best) * 100).toFixed(2)}%`,
       });
-    } catch (e: any) {
-      console.error("calculate() error:", e);
-      alert(`Calculation error: ${JSON.stringify(e)}`);
+    } catch (e) {
+      console.error(e);
+      alert("Error");
     } finally {
       setLoading(false);
     }
@@ -167,23 +197,25 @@ export default function MainTable({ decks, cardStyle }: MainTableProps) {
       <div className={trashOpen ? "table blurred" : "table"}>
         <button
           className="settings-btn"
-          onClick={() => setSettingsOpen((p) => !p)}
+          onClick={() => setSettingsOpen(true)}
           aria-label="Settings"
         >
           <FaCog size={20} />
         </button>
+        <SettingsModal
+          isOpen={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          decks={numDecks}
+          onDecksChange={setNumDecks}
+          onShuffle={clearAllHands}
+        />
         <button
           className="how-to-use-btn"
           onClick={() => setHowToUseOpen(true)}
-          title="How to Use"
           aria-label="How to Use"
         >
           <ImInfo size={20} />
         </button>
-        <SettingsModal
-          isOpen={settingsOpen}
-          onClose={() => setSettingsOpen(false)}
-        />
         <HowToUse
           isOpen={howToUseOpen}
           onClose={() => setHowToUseOpen(false)}
@@ -202,7 +234,6 @@ export default function MainTable({ decks, cardStyle }: MainTableProps) {
             className="calculate-btn"
             onClick={calculate}
             disabled={!canCalculate}
-            aria-disabled={!canCalculate}
           >
             {loading ? "Calculating..." : "Calculate"}
           </button>
@@ -213,9 +244,15 @@ export default function MainTable({ decks, cardStyle }: MainTableProps) {
           )}
           {results && (
             <div className="results">
-              <div><strong>Move:</strong> {results.move}</div>
-              <div><strong>Win:</strong> {results.winProb}</div>
-              <div><strong>Loss:</strong> {results.lossProb}</div>
+              <div>
+                <strong>Move:</strong> {results.move}
+              </div>
+              <div>
+                <strong>Win:</strong> {results.winProb}
+              </div>
+              <div>
+                <strong>Loss:</strong> {results.lossProb}
+              </div>
             </div>
           )}
         </div>
@@ -233,7 +270,7 @@ export default function MainTable({ decks, cardStyle }: MainTableProps) {
         <button
           className="trash-tab"
           onClick={() => setTrashOpen(true)}
-          aria-label="Open Seen Cards"
+          aria-label="Seen Cards"
         >
           <FaTrash size={20} />
         </button>
@@ -241,8 +278,8 @@ export default function MainTable({ decks, cardStyle }: MainTableProps) {
           isOpen={trashOpen}
           trash={trash}
           activeSuit={activeSuit}
-          onAdd={(r) => setTrash((prev) => [...prev, r])}
-          onRemove={(i) => setTrash((prev) => prev.filter((_, j) => j !== i))}
+          onAdd={(r) => setTrash((t) => [...t, r])}
+          onRemove={(i) => setTrash((t) => t.filter((_, j) => j !== i))}
           onClose={() => setTrashOpen(false)}
           remainingCounts={remainingCounts}
         />

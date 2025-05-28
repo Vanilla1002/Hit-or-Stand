@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from "react";
+import { createContext, useContext } from "react";
 import { ImHeart, ImDiamonds, ImSpades, ImClubs } from "react-icons/im";
 import { invoke } from "@tauri-apps/api/core";
 import { RiCloseFill } from "react-icons/ri";
@@ -19,27 +19,25 @@ export const SuitContext = createContext<SuitContextProps>({
 type Props = {
   isOpen: boolean;
   onClose: () => void;
+  decks: number;
+  onDecksChange: (n: number) => void;
+  onShuffle?: () => void;
 };
 
-export function SettingsModal({ isOpen, onClose }: Props) {
-  const { activeSuit, setActiveSuit } = useContext(SuitContext);
-  const [decks, setDecks] = useState<number>(1);
-  const [shuffled, setShuffled] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (isOpen) setShuffled(false);
-  }, [isOpen, decks]);
-
+export function SettingsModal({ isOpen, onClose, decks, onDecksChange, onShuffle }: Props) {
   if (!isOpen) return null;
+
+  const { activeSuit, setActiveSuit } = useContext(SuitContext);
 
   const handleShuffle = async () => {
     try {
       await invoke("create_deck", { numDecks: decks });
-      setShuffled(true);
+      onShuffle?.();
     } catch (err) {
       console.error("shuffle failed:", err);
     }
   };
+
   const suits: { key: Suit; icon: JSX.Element }[] = [
     { key: "hearts", icon: <ImHeart size={24} /> },
     { key: "diamonds", icon: <ImDiamonds size={24} /> },
@@ -50,11 +48,7 @@ export function SettingsModal({ isOpen, onClose }: Props) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div
-          className="modal-close-icon"
-          onClick={onClose}
-          aria-label="Close settings"
-        >
+        <div className="modal-close-icon" onClick={onClose} aria-label="Close settings">
           <RiCloseFill size={20} />
         </div>
         <h3 className="modal-title">Settings</h3>
@@ -66,15 +60,11 @@ export function SettingsModal({ isOpen, onClose }: Props) {
             min={1}
             max={20}
             value={decks}
-            onChange={(e) => setDecks(Number(e.target.value))}
+            onChange={(e) => onDecksChange(Number(e.target.value))}
           />
         </div>
         <div className="setting-item">
-          <button
-            className="shuffle-btn"
-            onClick={handleShuffle}
-            disabled={shuffled}
-          >
+          <button className="shuffle-btn" onClick={handleShuffle}>
             Shuffle Deck
           </button>
         </div>
