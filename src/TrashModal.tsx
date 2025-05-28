@@ -7,6 +7,7 @@ type Props = {
   onAdd: (rank: string) => void;
   onRemove: (idx: number) => void;
   onClose: () => void;
+  remainingCounts: Record<string, number>; // Added to track remaining cards per rank
 };
 
 export function TrashModal({
@@ -16,6 +17,7 @@ export function TrashModal({
   onAdd,
   onRemove,
   onClose,
+  remainingCounts,
 }: Props) {
   if (!isOpen) return null;
 
@@ -63,24 +65,29 @@ export function TrashModal({
               </button>
             </div>
           ))}
-          <div
-            className="add-trash-slot"
-            onClick={() => {
-              /* open rank picker here or pass rank */
-            }}
-          ></div>
+          <div className="add-trash-slot"></div>
         </div>
         <hr />
         <h4 className="modal-subtitle">Add a Card</h4>
         <div className="picker-grid">
           {RANKS.map((rank) => (
-            <img
-              key={rank}
-              src={`/cards/${activeSuit}_${rank}.png`}
-              alt={rank}
-              className="card-image picker-card"
-              onClick={() => onAdd(rank)}
-            />
+            <div key={rank} className="picker-card-wrapper">
+              <img
+                src={`/cards/${activeSuit}_${rank}.png`}
+                alt={rank}
+                className={`card-image picker-card ${
+                  remainingCounts[rank] <= 0 ? "exhausted" : ""
+                }`}
+                onClick={() => {
+                  if (remainingCounts[rank] > 0) {
+                    onAdd(rank);
+                  }
+                }}
+              />
+              {remainingCounts[rank] <= 0 && (
+                <div className="exhausted-overlay">X</div>
+              )}
+            </div>
           ))}
           <div className="picker-close-slot" onClick={onClose}>
             ×

@@ -89,6 +89,24 @@
   border-radius: 0.25rem;
   background: rgba(0, 0, 0, 0.05);
 }
+.picker-card-wrapper {
+  position: relative;
+}
+
+.picker-card.exhausted {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.exhausted-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  color: red;
+  pointer-events: none;
+}
 
 @media (max-width: 480px) {
   .modal.trash-modal {

@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import { FaCog, FaTrash } from "react-icons/fa";
+import { ImInfo } from "react-icons/im";
 import { SettingsModal } from "./SettingsModal";
 import { TrashModal } from "./TrashModal";
+import { HowToUse } from "./howToUse";
 import { invoke } from "@tauri-apps/api/core";
 import { SuitContext, Suit } from "./SettingsModal";
 import "./app.css";
 
 const RANKS = [
-  "A","2","3","4","5","6","7","8","9","10","J","Q","K",
+  "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K",
 ];
 
 type Results = { move: string; winProb: string; lossProb: string };
@@ -22,9 +24,10 @@ type HandProps = {
   onRemove?: (idx: number) => void;
   className?: string;
   style?: React.CSSProperties;
+  remainingCounts: Record<string, number>;
 };
 
-function Hand({ label, cards, onChange, onAdd, onRemove, className, style }: HandProps) {
+function Hand({ label, cards, onChange, onAdd, onRemove, className, style, remainingCounts }: HandProps) {
   const [pickerIdx, setPickerIdx] = useState<number | null>(null);
   const { activeSuit } = React.useContext(SuitContext);
 
@@ -53,16 +56,20 @@ function Hand({ label, cards, onChange, onAdd, onRemove, className, style }: Han
               <div className="card-picker-popup">
                 <div className="picker-grid">
                   {RANKS.map((name) => (
-                    <img
-                      key={name}
-                      src={`/cards/${activeSuit}_${name}.png`}
-                      alt={name}
-                      className="picker-card"
-                      onClick={() => {
-                        onChange(i, name);
-                        setPickerIdx(null);
-                      }}
-                    />
+                    <div key={name} className="picker-card-wrapper">
+                      <img
+                        src={`/cards/${activeSuit}_${name}.png`}
+                        alt={name}
+                        className={`picker-card ${remainingCounts[name] <= 0 ? 'exhausted' : ''}`}
+                        onClick={() => {
+                          if (remainingCounts[name] > 0) {
+                            onChange(i, name);
+                            setPickerIdx(null);
+                          }
+                        }}
+                      />
+                      {remainingCounts[name] <= 0 && <div className="exhausted-overlay">X</div>}
+                    </div>
                   ))}
                   <div
                     className="picker-close-slot"
@@ -100,12 +107,25 @@ type MainTableProps = { decks: number; cardStyle: string };
 export default function MainTable({ decks, cardStyle }: MainTableProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
+  const [howToUseOpen, setHowToUseOpen] = useState(false);
   const [trash, setTrash] = useState<string[]>([]);
   const [results, setResults] = useState<Results | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeSuit, setActiveSuit] = useState<Suit>(cardStyle as Suit);
   const [dealer, setDealer] = useState<string[]>([""]);
   const [player, setPlayer] = useState<string[]>(["", ""]);
+
+  // Calculate remaining counts for each rank
+  const initialCount = 4 * decks;
+  const allUsedCards = [...player, ...dealer, ...trash].filter(c => c !== "");
+  const usedCounts: Record<string, number> = {};
+  allUsedCards.forEach(card => {
+    usedCounts[card] = (usedCounts[card] || 0) + 1;
+  });
+  const remainingCounts = RANKS.reduce((acc, rank) => {
+    acc[rank] = initialCount - (usedCounts[rank] || 0);
+    return acc;
+  }, {} as Record<string, number>);
 
   const filledPlayerCards = player.filter((c) => c !== "").length;
   const canCalculate = !loading && filledPlayerCards >= 2 && dealer[0] !== "";
@@ -152,9 +172,21 @@ export default function MainTable({ decks, cardStyle }: MainTableProps) {
         >
           <FaCog size={20} />
         </button>
+        <button
+          className="how-to-use-btn"
+          onClick={() => setHowToUseOpen(true)}
+          title="How to Use"
+          aria-label="How to Use"
+        >
+          <ImInfo size={20} />
+        </button>
         <SettingsModal
           isOpen={settingsOpen}
           onClose={() => setSettingsOpen(false)}
+        />
+        <HowToUse
+          isOpen={howToUseOpen}
+          onClose={() => setHowToUseOpen(false)}
         />
 
         <Hand
@@ -162,6 +194,7 @@ export default function MainTable({ decks, cardStyle }: MainTableProps) {
           cards={dealer}
           onChange={(i, v) => updateHand(dealer, setDealer, i, v)}
           className="area dealer-area"
+          remainingCounts={remainingCounts}
         />
 
         <div className="center-panel">
@@ -171,7 +204,7 @@ export default function MainTable({ decks, cardStyle }: MainTableProps) {
             disabled={!canCalculate}
             aria-disabled={!canCalculate}
           >
-            {loading ? "Calculating...": "Calculate"}
+            {loading ? "Calculating..." : "Calculate"}
           </button>
           {!canCalculate && !loading && (
             <div className="hint">
@@ -194,6 +227,7 @@ export default function MainTable({ decks, cardStyle }: MainTableProps) {
           onAdd={() => setPlayer((p) => [...p, ""])}
           onRemove={(i) => setPlayer((p) => p.filter((_, j) => j !== i))}
           className="area player-area"
+          remainingCounts={remainingCounts}
         />
 
         <button
@@ -210,6 +244,7 @@ export default function MainTable({ decks, cardStyle }: MainTableProps) {
           onAdd={(r) => setTrash((prev) => [...prev, r])}
           onRemove={(i) => setTrash((prev) => prev.filter((_, j) => j !== i))}
           onClose={() => setTrashOpen(false)}
+          remainingCounts={remainingCounts}
         />
       </div>
     </SuitContext.Provider>

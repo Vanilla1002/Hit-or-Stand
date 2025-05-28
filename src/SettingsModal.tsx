@@ -72,16 +72,10 @@ export function SettingsModal({ isOpen, onClose }: Props) {
         <div className="setting-item">
           <button
             className="shuffle-btn"
-            onClick={() => setShuffled(true)}
+            onClick={handleShuffle}
             disabled={shuffled}
           >
-            <button
-              className="shuffle-btn"
-              onClick={handleShuffle}
-              disabled={shuffled}
-            >
-              Shuffle Deck
-            </button>
+            Shuffle Deck
           </button>
         </div>
         <hr />

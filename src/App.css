@@ -186,10 +186,44 @@ html {
   left: 0.5rem;
   background: var(--btn-bg);
   border: none;
+  border: 0.1rem solid var(--border-light);
   border-radius: 0.25rem;
   padding: 0.5rem;
   cursor: pointer;
   color: var(--text);
+  display: flex;
+  align-items: center;
+}
+.settings-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.how-to-use-btn {
+  position: absolute;
+  top: 3.5rem;
+  left: 0.5rem;
+  padding: 0.5rem;
+  background: var(--btn-bg);
+  border: 0.1rem solid var(--border-light);
+  border-radius: 0.25rem;
+  cursor: pointer;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+}
+
+.how-to-use-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+@media (max-width: 480px) {
+  .settings-btn {
+    padding: 0.4rem;
+  }
+
+  .how-to-use-btn {
+    padding: 0.4rem;
+  }
 }
 
 /* Center calculate panel */
@@ -324,6 +358,53 @@ html {
   cursor: pointer;
   padding: 0;
   font-size: 0.75rem;
+}
+
+.picker-card {
+  position: relative;
+  border-radius: 0.25rem;
+  overflow: hidden;
+  cursor: pointer;
+}
+.picker-card img {
+  width: var(--card-width);
+  height: var(--card-height);
+  object-fit: contain;
+}
+.picker-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 0 4px;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+.picker-card.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.picker-card-wrapper {
+  position: relative;
+}
+
+.picker-card.exhausted {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.exhausted-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  color: red;
+  pointer-events: none;
 }
 
 /* Responsive tweaks */
