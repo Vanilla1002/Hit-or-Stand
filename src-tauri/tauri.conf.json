@@ -3,6 +3,7 @@
   "productName": "Tauri+React+Typescript",
   "version": "0.1.0",
   "identifier": "hitOrStand",
+  "mainBinaryName": "Tauri+React+Typescript",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -10,16 +11,17 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "withGlobalTauri": true,
+    "security": {
+      "csp": null
+    },
     "windows": [
       {
         "title": "Tauri+React+Typescript",
         "width": 800,
         "height": 600
       }
-    ],
-    "security": {
-      "csp": null
-    }
+    ]
   },
   "bundle": {
     "active": true,

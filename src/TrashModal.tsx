@@ -1,6 +1,4 @@
-import React from 'react';
-import { FaTrash } from 'react-icons/fa';
-import './trashModal.css';
+import "./trashModal.css";
 
 type Props = {
   isOpen: boolean;
@@ -11,17 +9,40 @@ type Props = {
   onClose: () => void;
 };
 
-export function TrashModal({ isOpen, trash, activeSuit, onAdd, onRemove, onClose }: Props) {
+export function TrashModal({
+  isOpen,
+  trash,
+  activeSuit,
+  onAdd,
+  onRemove,
+  onClose,
+}: Props) {
   if (!isOpen) return null;
-  
+
   const RANKS = [
-    'A','2','3','4','5','6','7','8','9','10','J','Q','K'
+    "A",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "J",
+    "Q",
+    "K",
   ];
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal trash-modal" onClick={e => e.stopPropagation()}>
-        <button className="modal-close-icon" onClick={onClose} aria-label="Close Trash">
+      <div className="modal trash-modal" onClick={(e) => e.stopPropagation()}>
+        <button
+          className="modal-close-icon"
+          onClick={onClose}
+          aria-label="Close Trash"
+        >
           ×
         </button>
         <h3 className="modal-title">Seen Cards</h3>
@@ -42,14 +63,17 @@ export function TrashModal({ isOpen, trash, activeSuit, onAdd, onRemove, onClose
               </button>
             </div>
           ))}
-          <div className="add-trash-slot" onClick={() => { /* open rank picker here or pass rank */ }}>
-            +
-          </div>
+          <div
+            className="add-trash-slot"
+            onClick={() => {
+              /* open rank picker here or pass rank */
+            }}
+          ></div>
         </div>
         <hr />
         <h4 className="modal-subtitle">Add a Card</h4>
         <div className="picker-grid">
-          {RANKS.map(rank => (
+          {RANKS.map((rank) => (
             <img
               key={rank}
               src={`/cards/${activeSuit}_${rank}.png`}
@@ -58,7 +82,9 @@ export function TrashModal({ isOpen, trash, activeSuit, onAdd, onRemove, onClose
               onClick={() => onAdd(rank)}
             />
           ))}
-          <div className="picker-close-slot" onClick={onClose}>×</div>
+          <div className="picker-close-slot" onClick={onClose}>
+            ×
+          </div>
         </div>
       </div>
     </div>

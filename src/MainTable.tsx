@@ -1,29 +1,18 @@
-import React, { useState, useMemo, createContext } from "react";
+import React, { useState } from "react";
 import { FaCog, FaTrash } from "react-icons/fa";
 import { SettingsModal } from "./SettingsModal";
 import { TrashModal } from "./TrashModal";
+import { invoke } from "@tauri-apps/api/core";
+import { SuitContext, Suit } from "./SettingsModal";
 import "./app.css";
 
 const RANKS = [
-  "A",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7",
-  "8",
-  "9",
-  "10",
-  "J",
-  "Q",
-  "K",
+  "A","2","3","4","5","6","7","8","9","10","J","Q","K",
 ];
-export const SuitContext = createContext<{ activeSuit: string }>({
-  activeSuit: "hearts",
-});
 
 type Results = { move: string; winProb: string; lossProb: string };
+type DecideRequest = { player: string[]; dealer: string; others: string[] };
+type DecideResponse = { hitEv: number; standEv: number };
 
 type HandProps = {
   label: string;
@@ -35,20 +24,12 @@ type HandProps = {
   style?: React.CSSProperties;
 };
 
-function Hand({
-  label,
-  cards,
-  onChange,
-  onAdd,
-  onRemove,
-  className,
-  style,
-}: HandProps) {
+function Hand({ label, cards, onChange, onAdd, onRemove, className, style }: HandProps) {
   const [pickerIdx, setPickerIdx] = useState<number | null>(null);
   const { activeSuit } = React.useContext(SuitContext);
 
   return (
-    <div className={className || ""} style={style}>
+    <div className={className} style={style}>
       <div className="hand-header">
         <div className="role-label">{label}</div>
       </div>
@@ -76,7 +57,7 @@ function Hand({
                       key={name}
                       src={`/cards/${activeSuit}_${name}.png`}
                       alt={name}
-                      className="card-image picker-card"
+                      className="picker-card"
                       onClick={() => {
                         onChange(i, name);
                         setPickerIdx(null);
@@ -93,8 +74,12 @@ function Hand({
               </div>
             )}
 
-            {onRemove && c && (
-              <button className="remove-card-btn" onClick={() => onRemove(i)}>
+            {onRemove && (
+              <button
+                className="remove-card-btn"
+                onClick={() => onRemove(i)}
+                aria-label="Remove card"
+              >
                 ×
               </button>
             )}
@@ -110,26 +95,24 @@ function Hand({
   );
 }
 
-export default function TableApp() {
+type MainTableProps = { decks: number; cardStyle: string };
+
+export default function MainTable({ decks, cardStyle }: MainTableProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
-  const [trash, setTrash] = useState<Array<{ suit: string; rank: string }>>([]);
-  
-
-  const [activeSuit, setActiveSuit] = useState<
-    "hearts" | "diamonds" | "clubs" | "spades"
-  >("hearts");
-
+  const [trash, setTrash] = useState<string[]>([]);
+  const [results, setResults] = useState<Results | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [activeSuit, setActiveSuit] = useState<Suit>(cardStyle as Suit);
   const [dealer, setDealer] = useState<string[]>([""]);
   const [player, setPlayer] = useState<string[]>(["", ""]);
 
-  const [pickerIdx, setPickerIdx] = useState<number | "trash" | null>(null);
-  const [results, setResults] = useState<Results | null>(null);
-  const [loading, setLoading] = useState(false);
+  const filledPlayerCards = player.filter((c) => c !== "").length;
+  const canCalculate = !loading && filledPlayerCards >= 2 && dealer[0] !== "";
 
   const updateHand = (
     list: string[],
-    setList: any,
+    setList: React.Dispatch<React.SetStateAction<string[]>>,
     idx: number,
     val: string
   ) => {
@@ -138,28 +121,30 @@ export default function TableApp() {
     setList(clone);
   };
 
-  const canCalc = useMemo(
-    () => [...dealer, ...player].every((v) => v),
-    [dealer, player]
-  );
-  const calculate = () => {
+  const calculate = async () => {
     setLoading(true);
-    setTimeout(() => {
-      setResults({ move: "Stand", winProb: "—", lossProb: "—" });
+    setResults(null);
+    try {
+      const args: DecideRequest = { player, dealer: dealer[0], others: trash };
+      const res = await invoke<DecideResponse>("decide_hand", { req: args });
+      const move = res.hitEv > res.standEv ? "Hit" : "Stand";
+      const bestEv = Math.max(res.hitEv, res.standEv);
+      setResults({
+        move,
+        winProb: `${(bestEv * 100).toFixed(2)}%`,
+        lossProb: `${((1 - bestEv) * 100).toFixed(2)}%`,
+      });
+    } catch (e: any) {
+      console.error("calculate() error:", e);
+      alert(`Calculation error: ${JSON.stringify(e)}`);
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
-
-  const addTrash = (card: string) => {
-    setTrash((prev) => [...prev, card]);
-    setPickerIdx(null);
-  };
-  const removeTrash = (idx: number) =>
-    setTrash((prev) => prev.filter((_, i) => i !== idx));
 
   return (
-    <SuitContext.Provider value={{ activeSuit }}>
-      <div className={trashOpen ? 'table blurred' : 'table'}>
+    <SuitContext.Provider value={{ activeSuit, setActiveSuit }}>
+      <div className={trashOpen ? "table blurred" : "table"}>
         <button
           className="settings-btn"
           onClick={() => setSettingsOpen((p) => !p)}
@@ -169,14 +154,12 @@ export default function TableApp() {
         </button>
         <SettingsModal
           isOpen={settingsOpen}
-          active={activeSuit}
           onClose={() => setSettingsOpen(false)}
-          onSelect={(s) => setActiveSuit(s)}
         />
 
         <Hand
           label="Dealer"
-          cards={dealer.slice(0, 1)}
+          cards={dealer}
           onChange={(i, v) => updateHand(dealer, setDealer, i, v)}
           className="area dealer-area"
         />
@@ -184,22 +167,22 @@ export default function TableApp() {
         <div className="center-panel">
           <button
             className="calculate-btn"
-            disabled={!canCalc || loading}
             onClick={calculate}
+            disabled={!canCalculate}
+            aria-disabled={!canCalculate}
           >
-            {loading ? "Calculating..." : "Calculate"}
+            {loading ? "Calculating...": "Calculate"}
           </button>
+          {!canCalculate && !loading && (
+            <div className="hint">
+              You need at least two cards and a dealer card to calculate.
+            </div>
+          )}
           {results && (
             <div className="results">
-              <div>
-                <strong>Move:</strong> {results.move}
-              </div>
-              <div>
-                <strong>Win:</strong> {results.winProb}
-              </div>
-              <div>
-                <strong>Loss:</strong> {results.lossProb}
-              </div>
+              <div><strong>Move:</strong> {results.move}</div>
+              <div><strong>Win:</strong> {results.winProb}</div>
+              <div><strong>Loss:</strong> {results.lossProb}</div>
             </div>
           )}
         </div>
@@ -213,20 +196,21 @@ export default function TableApp() {
           className="area player-area"
         />
 
-        {/* Trash Tab */}
-        <button className="trash-tab" onClick={() => setTrashOpen(true)} aria-label="Open Seen Cards">
+        <button
+          className="trash-tab"
+          onClick={() => setTrashOpen(true)}
+          aria-label="Open Seen Cards"
+        >
           <FaTrash size={20} />
         </button>
-
         <TrashModal
           isOpen={trashOpen}
           trash={trash}
           activeSuit={activeSuit}
-          onAdd={addTrash}
-          onRemove={removeTrash}
+          onAdd={(r) => setTrash((prev) => [...prev, r])}
+          onRemove={(i) => setTrash((prev) => prev.filter((_, j) => j !== i))}
           onClose={() => setTrashOpen(false)}
         />
-
       </div>
     </SuitContext.Provider>
   );
