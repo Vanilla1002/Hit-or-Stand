@@ -83,6 +83,8 @@ export function HowToUse({ isOpen, onClose }: HowToUseProps) {
           After these quick selections, simply click "Start."<br /><br />
           During each turn, you'll input your current hand and the dealer's face-up card. To supercharge the calculator's accuracy, you can also input any "trashed" cards from other players' hands.<br /><br />
           With a quick click of "Calculate," you'll receive the optimal move to make, plus the exact probability of winning or losing. Once you've made your move, you have two choices: either proceed to the "Next Turn" for a fresh start, or if you took a card, enter the new card to recalculate and refine your strategy mid-turn.
+          <br /><br />
+          disclaimer: this app is not intended for gambling.
         </p>
       </div>
     </div>

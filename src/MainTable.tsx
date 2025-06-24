@@ -3,7 +3,7 @@ import { FaCog, FaTrash } from "react-icons/fa";
 import { ImInfo } from "react-icons/im";
 import { SettingsModal } from "./SettingsModal";
 import { TrashModal } from "./TrashModal";
-import { HowToUse } from "./howToUse";
+import { HowToUse } from "./HowToUse";
 import { invoke } from "@tauri-apps/api/core";
 import { SuitContext } from "./SettingsModal";
 import { useDeck } from "./deckContext";
@@ -109,7 +109,7 @@ function Hand({ label, cards, onChange, onAdd, onRemove, className, remainingCou
   );
 }
 
-export default function MainTable({ decks: initialDecks, cardStyle }: { decks: number; cardStyle: string }) {
+export default function MainTable({ decks: initialDecks }: { decks: number; cardStyle: string }) {
   const [numDecks, setNumDecks] = useState<number>(initialDecks);
   const [trash, setTrash] = useState<string[]>([]);
   const [dealer, setDealer] = useState<string[]>([""]);

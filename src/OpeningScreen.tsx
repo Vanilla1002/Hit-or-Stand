@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { ImHeart, ImDiamonds, ImSpades, ImClubs, ImInfo } from "react-icons/im";
-import { HowToUse } from "./howToUse";
+import { HowToUse } from "./HowToUse";
 import "./app.css";
 
 export type GameConfig = {
